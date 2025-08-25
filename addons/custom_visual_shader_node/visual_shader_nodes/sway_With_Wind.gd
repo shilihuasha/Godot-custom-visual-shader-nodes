@@ -6,7 +6,7 @@ func _get_name() -> String:
 	return "SwayWithWind"
 
 func _get_category() -> String:
-	return "Vertex"
+	return "Custom/Vertex"
 
 func _get_description() -> String:
 	return "Applies wind sway + noise + player push effect to vertex positions."

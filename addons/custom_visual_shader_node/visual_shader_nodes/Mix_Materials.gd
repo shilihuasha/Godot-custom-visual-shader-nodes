@@ -3,7 +3,7 @@ extends VisualShaderNodeCustom
 class_name VisualShaderNode_MaterialBlend4
 
 func _get_name(): return "MaterialBlend4"
-func _get_category(): return "Custom/Materials"
+func _get_category(): return "Custom/Fragment"
 func _get_description(): return "Blend 4 PBR materials (Albedo, Normal, ORM) using a Vector4 weight and a Vector2 UV input."
 func _get_return_icon_type(): return VisualShaderNodeCustom.PORT_TYPE_VECTOR_3D
 
