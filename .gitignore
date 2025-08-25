@@ -1,0 +1,6 @@
+# Godot 4.x 自动生成的 UID 文件
+*.uid
+
+# Godot 内部缓存
+.godot/
+.import/
