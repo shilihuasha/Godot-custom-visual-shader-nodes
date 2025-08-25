@@ -34,7 +34,7 @@ func _get_input_port_name(port):
 		10: return "Albedo4"
 		11: return "Normal4"
 		12: return "ORM4"
-		13: return "UV_input"
+		13: return "UV input"
 		_:  return ""
 
 #  输出：Albedo(vec3), Normal(vec3), Metallic(float), Roughness(float), AO(float)
@@ -65,37 +65,48 @@ func _get_code(input_vars, output_vars, mode, type):
 	var A3 = input_vars[7];  var N3 = input_vars[8];  var O3 = input_vars[9]
 	var A4 = input_vars[10]; var N4 = input_vars[11]; var O4 = input_vars[12]
 	var UV = input_vars[13]
-
+	
 	var code := ""
-	code += "vec4 w = " + W + ";\n"
-	code += "w /= max(dot(w, vec4(1.0)), 0.0001);\n" # 归一化权重，避免全零
+	if W != "" and UV != "" :
+		code += "vec4 w = " + W + ";\n"
+		code += "w /= max(dot(w, vec4(1.0)), 0.0001);\n" # 归一化权重，避免全零
+		code += "vec3 albedo = vec3(0.0);\n"
+		if A1 != "":
+			code += "albedo += texture(" + A1 + ", " + UV + ").rgb * w.x;\n"
+		if A2 != "":
+			code += "albedo += texture(" + A2 + ", " + UV + ").rgb * w.y;\n"
+		if A3 != "":
+			code += "albedo += texture(" + A3 + ", " + UV + ").rgb * w.z;\n"
+		if A4 != "":
+			code += "albedo += texture(" + A4 + ", " + UV + ").rgb * w.w;\n"
 
-	# --- Albedo 混合（线性混合）
-	code += "vec3 albedo = "
-	code += "texture(" + A1 + ", " + UV + ").rgb * w.x + "
-	code += "texture(" + A2 + ", " + UV + ").rgb * w.y + "
-	code += "texture(" + A3 + ", " + UV + ").rgb * w.z + "
-	code += "texture(" + A4 + ", " + UV + ").rgb * w.w;\n"
+		# --- Normal 混合（条件拼接 + 归一化）
+		code += "vec3 normal_ts = vec3(0.0);\n"
+		if N1 != "":
+			code += "normal_ts += (texture(" + N1 + ", " + UV + ").rgb * 2.0 - 1.0) * w.x;\n"
+		if N2 != "":
+			code += "normal_ts += (texture(" + N2 + ", " + UV + ").rgb * 2.0 - 1.0) * w.y;\n"
+		if N3 != "":
+			code += "normal_ts += (texture(" + N3 + ", " + UV + ").rgb * 2.0 - 1.0) * w.z;\n"
+		if N4 != "":
+			code += "normal_ts += (texture(" + N4 + ", " + UV + ").rgb * 2.0 - 1.0) * w.w;\n"
+		code += "normal_ts = normalize(normal_ts);\n"
 
-	# --- Normal 混合：先解包到 [-1,1]，再按权重线性混合并归一化（简单可用；更精确可用 RNM）
-	code += "vec3 n1 = texture(" + N1 + ", " + UV + ").rgb * 2.0 - 1.0;\n"
-	code += "vec3 n2 = texture(" + N2 + ", " + UV + ").rgb * 2.0 - 1.0;\n"
-	code += "vec3 n3 = texture(" + N3 + ", " + UV + ").rgb * 2.0 - 1.0;\n"
-	code += "vec3 n4 = texture(" + N4 + ", " + UV + ").rgb * 2.0 - 1.0;\n"
-	code += "vec3 normal_ts = normalize(n1 * w.x + n2 * w.y + n3 * w.z + n4 * w.w);\n"
+		# --- ORM 混合（条件拼接）
+		code += "vec3 orm = vec3(0.0);\n"
+		if O1 != "":
+			code += "orm += texture(" + O1 + ", " + UV + ").rgb * w.x;\n"
+		if O2 != "":
+			code += "orm += texture(" + O2 + ", " + UV + ").rgb * w.y;\n"
+		if O3 != "":
+			code += "orm += texture(" + O3 + ", " + UV + ").rgb * w.z;\n"
+		if O4 != "":
+			code += "orm += texture(" + O4 + ", " + UV + ").rgb * w.w;\n"
 
-	# --- ORM 混合（R=AO, G=Roughness, B=Metallic）
-	code += "vec3 orm = "
-	code += "texture(" + O1 + ", " + UV + ").rgb * w.x + "
-	code += "texture(" + O2 + ", " + UV + ").rgb * w.y + "
-	code += "texture(" + O3 + ", " + UV + ").rgb * w.z + "
-	code += "texture(" + O4 + ", " + UV + ").rgb * w.w;\n"
-
-	# --- 输出
-	code += output_vars[0] + " = albedo;\n"
-	code += output_vars[1] + " = normal_ts;\n"
-	code += output_vars[2] + " = orm.b;\n" # Metallic
-	code += output_vars[3] + " = orm.g;\n" # Roughness
-	code += output_vars[4] + " = orm.r;\n" # AO
-
+		# --- 输出
+		code += output_vars[0] + " = albedo;\n"
+		code += output_vars[1] + " = normal_ts;\n"
+		code += output_vars[2] + " = orm.b;\n" # Metallic
+		code += output_vars[3] + " = orm.g;\n" # Roughness
+		code += output_vars[4] + " = orm.r;\n" # AO
 	return code
