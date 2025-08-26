@@ -35,17 +35,17 @@ func _get_input_port_type(port: int) -> int:
 
 func _get_input_port_name(port: int) -> String:
 	match port:
-		0:  return "player_position"
-		1:  return "radius"
-		2:  return "falloff"
-		3:  return "strength"
-		4:  return "freq"
-		5:  return "wind_speed"
-		6:  return "wind_strength"
-		7:  return "noise_scale"
-		8:  return "noise_speed"
-		9:  return "wind_noise"
-		10: return "wind_dir"
+		0:  return "[OPT] player_position"
+		1:  return "[OPT] radius"
+		2:  return "[OPT] falloff"
+		3:  return "[OPT] strength"
+		4:  return "[OPT] freq"
+		5:  return "[OPT] wind_speed"
+		6:  return "[OPT] wind_strength"
+		7:  return "[OPT] noise_scale"
+		8:  return "[OPT] noise_speed"
+		9:  return "[REQ] wind_noise"
+		10: return "[OPT] wind_dir"
 		_:  return ""
 
 # 输出端口
@@ -77,24 +77,24 @@ func _get_code(input_vars: Array, output_vars: Array, mode: int, _type: int) -> 
 	var OUT = output_vars[0]
 
 	var code := ""
+	if wind_noise!="":
+		# 玩家对草的影响
+		code += "float dist = length(NODE_POSITION_WORLD - "+player_position+");\n"
+		code += "float push_factor = (1.0 - smoothstep("+radius+", "+radius+" + "+falloff+", dist)) *(1.0 - UV.y) * "+strength+" ;\n"
+		code += "vec3 dir = normalize(NODE_POSITION_WORLD - " + player_position + ");\n"
+		code += "vec3 push_offset = dir * push_factor;\n"
 
-	# 玩家对草的影响
-	code += "float dist = length(NODE_POSITION_WORLD - "+player_position+");\n"
-	code += "float push_factor = (1.0 - smoothstep("+radius+", "+radius+" + "+falloff+", dist)) *(1.0 - UV.y) * "+strength+" ;\n"
-	code += "vec3 dir = normalize(NODE_POSITION_WORLD - " + player_position + ");\n"
-	code += "vec3 push_offset = dir * push_factor;\n"
+		# 风摆动
+		code += "float t = TIME * " + wind_speed + ";\n"
+		code += "float sway = sin(VERTEX.x * "+freq+".x + VERTEX.z * "+freq+".y + TIME * "+wind_speed+") * "+wind_strength+" * (1.0-UV.y);\n"
 
-	# 风摆动
-	code += "float t = TIME * " + wind_speed + ";\n"
-	code += "float sway = sin(VERTEX.x * "+freq+".x + VERTEX.z * "+freq+".y + TIME * "+wind_speed+") * "+wind_strength+" * (1.0-UV.y);\n"
+		# 噪声扰动
+		code += "float noise = texture(" + wind_noise + ", NODE_POSITION_WORLD.xz * " + noise_scale + " + vec2(TIME*" + noise_speed + ")).r;\n"
+		code += "vec3 noise_offset = vec3(normalize("+wind_dir+").x*noise,0.0,normalize("+wind_dir+").y*noise);\n"
+		
 
-	# 噪声扰动
-	code += "float noise = texture(" + wind_noise + ", NODE_POSITION_WORLD.xz * " + noise_scale + " + vec2(TIME*" + noise_speed + ")).r;\n"
-	code += "vec3 noise_offset = vec3(normalize("+wind_dir+").x*noise,0.0,normalize("+wind_dir+").y*noise);\n"
-	
-
-	# 总偏移
-	code += "vec3 offset = noise_offset * sway + push_offset + VERTEX;\n"
-	code += OUT + " = offset;\n"
+		# 总偏移
+		code += "vec3 offset = noise_offset * sway + push_offset + VERTEX;\n"
+		code += OUT + " = offset;\n"
 
 	return code
